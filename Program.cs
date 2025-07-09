@@ -22,7 +22,7 @@ builder.Services
     .WithToolsFromAssembly();
 
 builder.Services.AddHttpClient();
-builder.Services.AddSingleton<MonkeyService>();
+builder.Services.AddSingleton<PlantService>();
 await builder.Build().RunAsync();
 
 namespace myfirstmcp
@@ -42,20 +42,20 @@ namespace myfirstmcp
     }
 
     [McpServerToolType]
-    public static class MonkeyTools
+    public static class PlantTools
     {
-        [McpServerTool, Description("Get a list of monkeys.")]
-        public static async Task<string> GetMonkeys(MonkeyService monkeyService)
+        [McpServerTool, Description("Get a list of plants.")]
+        public static async Task<string> GetPlants(PlantService plantService)
         {
-            var monkeys = await monkeyService.GetMonkeys();
-            return JsonSerializer.Serialize(monkeys);
+            var plants = await plantService.GetPlants();
+            return JsonSerializer.Serialize(plants);
         }
 
-        [McpServerTool, Description("Get a monkey by name.")]
-        public static async Task<string> GetMonkey(MonkeyService monkeyService, [Description("The name of the monkey to get details for")] string name)
+        [McpServerTool, Description("Get a plant by name.")]
+        public static async Task<string> GetPlant(PlantService plantService, [Description("The name of the plant to get details for")] string name)
         {
-            var monkey = await monkeyService.GetMonkey(name);
-            return JsonSerializer.Serialize(monkey);
+            var plant = await plantService.GetPlant(name);
+            return JsonSerializer.Serialize(plant);
         }
     }
 
@@ -79,52 +79,117 @@ namespace myfirstmcp
         }
     }
 
-    public class MonkeyService
+    [McpServerToolType]
+    public static class GitHubProfileTools
+    {
+        [McpServerTool, Description("Gets information about a GitHub profile by username.")]
+        public static async Task<string> GetGitHubProfile(
+            [Description("The GitHub username to look up.")] string username,
+            IHttpClientFactory httpClientFactory)
+        {
+            var httpClient = httpClientFactory.CreateClient();
+            httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("MyFirstMCP-Agent");
+            var url = $"https://api.github.com/users/{username}";
+            var response = await httpClient.GetAsync(url);
+            if (!response.IsSuccessStatusCode)
+                return $"Could not fetch profile for '{username}'. Status: {response.StatusCode}";
+            var json = await response.Content.ReadAsStringAsync();
+            return json;
+        }
+    }
+
+    [McpServerToolType]
+    public static class ObsidianTools
+    {
+        private const string DefaultVaultPath = @"C:\\Users\\Noah\\Documents\\stuff";
+
+        [McpServerTool, Description("Searches your Obsidian vault for notes containing a keyword.")]
+        public static string SearchObsidianNotes(
+            [Description("The keyword to search for")] string keyword)
+        {
+            return SearchObsidianNotesWithPath(DefaultVaultPath, keyword);
+        }
+
+        [McpServerTool, Description("Searches your Obsidian vault for notes containing a keyword (custom path).")]
+        public static string SearchObsidianNotesWithPath(
+            [Description("The path to your Obsidian vault directory")] string vaultPath,
+            [Description("The keyword to search for")] string keyword)
+        {
+            if (!Directory.Exists(vaultPath))
+                return $"Vault directory not found: {vaultPath}";
+
+            var results = new List<string>();
+            foreach (var file in Directory.EnumerateFiles(vaultPath, "*.md", SearchOption.AllDirectories))
+            {
+                var lines = File.ReadAllLines(file);
+                for (int i = 0; i < lines.Length; i++)
+                {
+                    if (lines[i].IndexOf(keyword, StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        results.Add($"{Path.GetFileName(file)} (line {i + 1}): {lines[i].Trim()}");
+                    }
+                }
+            }
+            if (results.Count == 0)
+                return $"No notes found containing '{keyword}'.";
+            return string.Join("\n", results);
+        }
+
+        [McpServerTool, Description("Adds a new note to your Obsidian vault.")]
+        public static string AddToObsidianDocs(
+            [Description("The note title (filename, without .md)")] string title,
+            [Description("The note content")] string content)
+        {
+            var filePath = Path.Combine(DefaultVaultPath, title + ".md");
+            File.WriteAllText(filePath, content);
+            return $"Note '{title}' added to Obsidian vault.";
+        }
+    }
+
+    public class PlantService
     {
         private readonly HttpClient httpClient;
-        public MonkeyService(IHttpClientFactory httpClientFactory)
+        public PlantService(IHttpClientFactory httpClientFactory)
         {
             httpClient = httpClientFactory.CreateClient();
         }
 
-        List<Monkey> monkeyList = new();
-        public async Task<List<Monkey>> GetMonkeys()
+        List<Plant> plantList = new();
+        public async Task<List<Plant>> GetPlants()
         {
-            if (monkeyList?.Count > 0)
-                return monkeyList;
+            if (plantList?.Count > 0)
+                return plantList;
 
-            var response = await httpClient.GetAsync("https://www.montemagno.com/monkeys.json");
+            var response = await httpClient.GetAsync("https://raw.githubusercontent.com/dariusk/corpora/master/data/plants/plants.json");
             if (response.IsSuccessStatusCode)
             {
-                monkeyList = await response.Content.ReadFromJsonAsync(MonkeyContext.Default.ListMonkey) ?? [];
+                var jsonDoc = await response.Content.ReadAsStringAsync();
+                var doc = JsonDocument.Parse(jsonDoc);
+                plantList = doc.RootElement.GetProperty("plants").EnumerateArray()
+                    .Select(p => new Plant {
+                        Name = p.TryGetProperty("name", out var n) ? n.GetString() : "Unknown",
+                        Species = p.TryGetProperty("species", out var s) ? s.GetString() : null
+                    }).ToList();
             }
-
-            monkeyList ??= [];
-
-            return monkeyList;
+            plantList ??= [];
+            return plantList;
         }
 
-        public async Task<Monkey?> GetMonkey(string name)
+        public async Task<Plant?> GetPlant(string name)
         {
-            var monkeys = await GetMonkeys();
-            return monkeys.FirstOrDefault(m => m.Name?.Equals(name, StringComparison.OrdinalIgnoreCase) == true);
+            var plants = await GetPlants();
+            return plants.FirstOrDefault(p => p.Name?.Equals(name, StringComparison.OrdinalIgnoreCase) == true);
         }
     }
 
-    public partial class Monkey
+    public partial class Plant
     {
         public string? Name { get; set; }
-        public string? Location { get; set; }
-        public string? Details { get; set; }
-        public string? Image { get; set; }
-        public int Population { get; set; }
-        public double Latitude { get; set; }
-        public double Longitude { get; set; }
+        public string? Species { get; set; }
     }
 
-    [JsonSerializable(typeof(List<Monkey>))]
-    internal sealed partial class MonkeyContext : JsonSerializerContext
+    [JsonSerializable(typeof(List<Plant>))]
+    internal sealed partial class PlantContext : JsonSerializerContext
     {
-
     }
 }
