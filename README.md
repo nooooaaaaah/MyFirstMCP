@@ -1,97 +1,58 @@
 # MyFirstMCP
 
-A Model Context Protocol (MCP) server implementation with various tools for demonstration and utility purposes.
+This project is a Model Context Protocol (MCP) server written in C#. It provides a set of tools and APIs for interacting with plant data, PowerShell, GitHub profiles, and your Obsidian notes.
 
 ## Features
 
-This MCP server provides the following tools:
+- **Plant Tools**: Query a large list of plants by name or get the full list. Plant data is fetched from a public JSON source and includes common and scientific names. You can search for specific plants, get all apples, or find the plant with the longest name.
+- **PowerShell Tools**: Run PowerShell cmdlets and get the output directly from the MCP server. Useful for automation and system management tasks.
+- **GitHub Profile Tools**: Fetch public GitHub profile information by username, including details like bio, repositories, and more.
+- **Obsidian Tools**: Search and add notes to your Obsidian vault (default path: `C:\Users\Noah\Documents\stuff`). You can add new notes, search for keywords, or automate documentation workflows.
+- **Echo Tools**: Simple echo and reverse-echo utilities for testing, fun, or string manipulation.
 
-### Echo Tools
-- **Echo** - Echoes back the provided message
-- **ReverseEcho** - Echoes back the provided message in reverse
+## Usage
 
-### Fun Tools
-- **SpencerIsIdiot** - Tells Spencer he's an idiot (returns a JSON response)
-
-### Monkey Tools
-- **GetMonkeys** - Returns a list of monkeys
-- **GetMonkey** - Gets details about a specific monkey by name
-
-### PowerShell Tools
-- **InvokeCmdlet** - Executes PowerShell cmdlets and returns the output
-
-## Setup and Configuration
-
-### Prerequisites
-- .NET 8.0 SDK
-- Visual Studio Code with MCP extension
-
-### Environment Configuration
-Create a `.env` file in the root directory with the following settings:
-```
-ENABLED_FEATURES=EchoTool,ReverseEcho,SpencerIsIdiot,MonkeyTools,PowerShellTools
-LOG_LEVEL=Info
-```
-
-### VS Code Configuration
-Ensure your `.vscode/mcp.json` file contains:
-```json
-{
-    "commands": {
-        "backend": "dotnet run"
-    }
-}
-```
-
-## Building and Running
-
-1. Install required NuGet packages:
-   ```powershell
-   dotnet add package Microsoft.PowerShell.SDK
+1. Clone the repository and open in Visual Studio or VS Code.
+2. Run the server with:
    ```
-
-2. Build the project:
-   ```powershell
-   dotnet build
-   ```
-
-3. Run the MCP server:
-   ```powershell
    dotnet run
    ```
+3. Use the MCP client or your own integration to call the available tools. You can interact with the server using JSON-RPC or any compatible client.
 
-## Tool Usage Examples
+## Example Plant Query
 
-### Echo
-```json
-{
-  "message": "Hello, world!"
-}
-```
+- Get all plants:
+  - `GetPlants`
+- Get a plant by name:
+  - `GetPlant("Apple")`
+- Find all apples:
+  - Search for plants with "apple" in the name.
+- Find the plant with the longest name:
+  - Use a custom query or iterate through the plant list.
 
-### ReverseEcho
-```json
-{
-  "message": "Hello, world!"
-}
-```
-Response: `!dlrow ,olleH`
+## Example Obsidian Note
 
-### GetMonkeys
-Returns a list of all monkeys.
+- Add a note:
+  - `AddToObsidianDocs("note-title", "note content")`
+- Search notes:
+  - `SearchObsidianNotes("keyword")`
 
-### GetMonkey
-```json
-{
-  "name": "Capuchin"
-}
-```
+## PowerShell Example
 
-### InvokeCmdlet
-```json
-{
-  "cmdlet": "Get-Process",
-  "arguments": "-Name explorer"
-}
-```
+- Run a command:
+  - `InvokeCmdlet("Get-Process")`
+
+## GitHub Example
+
+- Get a profile:
+  - `GetGitHubProfile("octocat")`
+
+## Requirements
+- .NET 8.0 or later
+- Internet access for plant and GitHub data
+- Obsidian vault at `C:\Users\Noah\Documents\stuff` (for Obsidian tools; you can change the path in the code if needed)
+
+## License
+MIT
+
 
